@@ -144,8 +144,8 @@ def solve_linear_program(base, c_p, A, b):
   return x_opt, z_opt, B_1
 
 np.random.seed(12345)
-num_variables = 30
-num_restricciones = 50
+num_variables = 110
+num_restricciones = 130
 A = [np.random.rand(num_variables) for j in range(num_restricciones)]
 c = np.random.rand(num_variables)
 b = np.random.rand(num_restricciones)

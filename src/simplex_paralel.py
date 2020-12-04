@@ -24,6 +24,7 @@ def matrix_product(A,B):
   cols_B = B.shape[1]
   cols_A = A.shape[1]
               
+  #Se calcula la cantidad de columnas que le corresponde a cada proceso
   cols_per_proces = cols_A // (total_processes-1)
 
   #Para el caso en el que los datos a repartir y los procesos no son múltiplos
@@ -141,11 +142,11 @@ def simplex_init(c, greaterThans=[], gtThreshold=[], lessThans=[], ltThreshold=[
     A[(amount_lt+amount_gt):(amount_lt+amount_gt+amount_eq),:n] = equalities
     b[(amount_lt+amount_gt):(amount_lt+amount_gt+amount_eq)] = eqThreshold
 
-  #Se calcula la cantidad de datos que le corresponde a cada proceso
+  #Se calcula la cantidad de filas que le corresponde a cada proceso
   amount_per_process = amount_lt // (total_processes-1)
   rest = amount_lt % (total_processes-1)
 
-  #Para el caso en el que los datos a repartir y los procesos no son múltiplos
+  #Para el caso en el que las filas a repartir y los procesos no son múltiplos
   if (rank == (total_processes-1)) and rest != 0:
     amount_per_process += rest
 
@@ -254,11 +255,11 @@ def solve_linear_program(base, c_p, A, b):
 
     b_p = matrix_product(B_1,b)
 
-    #Se calcula la cantidad de datos que le corresponde a cada proceso
+    #Se calcula la cantidad de filas que le corresponde a cada proceso
     amount_per_process = m // (total_processes-1)
     rest = m % (total_processes-1)
 
-    #Para el caso en el que los datos a repartir y los procesos no son múltiplos
+    #Para el caso en el que las filas a repartir y los procesos no son múltiplos
     if (rank == (total_processes-1)) and rest != 0:
       amount_per_process += rest
 
