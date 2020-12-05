@@ -25,10 +25,10 @@ def matrix_product(A,B):
   cols_A = A.shape[1]
               
   #Se calcula la cantidad de columnas que le corresponde a cada proceso
-  cols_per_proces = cols_A // (total_processes-1)
+  cols_per_proces = cols_A // (total_processes)
 
   #Para el caso en el que los datos a repartir y los procesos no son múltiplos
-  rest = cols_A % (total_processes-1)
+  rest = cols_A % (total_processes)
   if (rank == (total_processes-1)) and rest != 0:
     cols_per_proces += rest
 
@@ -47,13 +47,17 @@ def matrix_product(A,B):
 
         #Se reparten las columnas de A que van a trabajar los procesos
         process = 1
-        for col in range(0,cols_A,cols_per_proces):
+        for col in range(cols_per_proces,cols_A,cols_per_proces):
 
-          if (process == (total_processes)) and (cols_A % (total_processes-1) != 0):
+          if (process == (total_processes)) and (cols_A % (total_processes) != 0):
             break
           else:
             comm.send(col,dest=process)
           process += 1
+
+        #El proceso 0 hace su parte
+        for k in range(0,cols_per_proces):
+          suma += A[i,k]*B[k,j]
 
         #El proceso 0 recibe los resultados y acumula todo en la matriz resultado
         for proc in range(1,total_processes):
@@ -143,8 +147,8 @@ def simplex_init(c, greaterThans=[], gtThreshold=[], lessThans=[], ltThreshold=[
     b[(amount_lt+amount_gt):(amount_lt+amount_gt+amount_eq)] = eqThreshold
 
   #Se calcula la cantidad de filas que le corresponde a cada proceso
-  amount_per_process = amount_lt // (total_processes-1)
-  rest = amount_lt % (total_processes-1)
+  amount_per_process = amount_lt // (total_processes)
+  rest = amount_lt % (total_processes)
 
   #Para el caso en el que las filas a repartir y los procesos no son múltiplos
   if (rank == (total_processes-1)) and rest != 0:
@@ -160,12 +164,16 @@ def simplex_init(c, greaterThans=[], gtThreshold=[], lessThans=[], ltThreshold=[
 
     #Se envia a cada proceso su parte para calcular
     process = 1
-    for i in range(0,amount_lt,amount_per_process):
-      if (process == (total_processes)) and (amount_lt % (total_processes-1) != 0):
+    for i in range(amount_per_process,amount_lt,amount_per_process):
+      if (process == (total_processes)) and (amount_lt % (total_processes) != 0):
         break
       else:                  
         comm.send(i,dest=process)
       process += 1
+
+    for x in range(0,amount_per_process):
+      A[:,n+x] = [(1. if x == j else 0) for j in range(m)]
+      base.append(n+x)
     
     #Agrupa los vectores soluciones en la base y la matriz A
     for i in range(1,total_processes):
@@ -249,15 +257,11 @@ def solve_linear_program(base, c_p, A, b):
     # Vector correspondiente a la variable entrante
     A_ve = matrix_product(B_1,A[:,ve])
 
-    """
-    Calculamos los cocientes tita en paralelo 
-    """
-
     b_p = matrix_product(B_1,b)
 
     #Se calcula la cantidad de filas que le corresponde a cada proceso
-    amount_per_process = m // (total_processes-1)
-    rest = m % (total_processes-1)
+    amount_per_process = m // (total_processes)
+    rest = m % (total_processes)
 
     #Para el caso en el que las filas a repartir y los procesos no son múltiplos
     if (rank == (total_processes-1)) and rest != 0:
@@ -275,13 +279,21 @@ def solve_linear_program(base, c_p, A, b):
 
       #Se envia a cada proceso su parte para calcular las titas
       process = 1
-      for i in range(0,m,amount_per_process):
+      for i in range(amount_per_process,m,amount_per_process):
 
-        if (process == (total_processes)) and (m % (total_processes-1) != 0):
+        if (process == (total_processes)) and (m % (total_processes) != 0):
             break
         else:
             comm.send(i,dest=process)
         process += 1
+
+      #El proceso 0 hace su parte
+      for x in range(0,amount_per_process):
+        if A_ve[x] > 0:
+          calculo = b_p[x]/A_ve[x]
+        else:
+          calculo = np.nan
+        titas.append(calculo)
 
       #Agrupa los resultados en el vector de titas
       for i in range(1,total_processes):
@@ -355,8 +367,8 @@ total_processes = comm.Get_size()
 
 start_time = time.time()
 
-#base, c_p, A, b = simplex_init(c, lessThans=A, ltThreshold=b, maximization=True, M=10.)
-base, c_p, A, b = simplex_init([300., 250., 450.], greaterThans=[[0., 250., 0.]], gtThreshold=[500.], lessThans=[[15., 20., 25.], [35., 60., 60.], [20., 30., 25.]], ltThreshold=[1200., 3000., 1500.], maximization=True, M=1000.)
+base, c_p, A, b = simplex_init(c, lessThans=A, ltThreshold=b, maximization=True, M=10.)
+#base, c_p, A, b = simplex_init([300., 250., 450.], greaterThans=[[0., 250., 0.]], gtThreshold=[500.], lessThans=[[15., 20., 25.], [35., 60., 60.], [20., 30., 25.]], ltThreshold=[1200., 3000., 1500.], maximization=True, M=1000.)
 
 x_opt, z_opt, _ = solve_linear_program(base, c_p, A, b)
 
